@@ -4,15 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Study Timer</title>
-  <!-- Favicon -->
-  <link rel="icon" type="image/png" href="https://i.ibb.co/v6vHD7x/Igris-favicon.png">
   <link rel="icon" type="image/png" href="https://i.ibb.co/v6vHD7x/rdknl-favicon.png">
-  <!-- React & React DOM -->
   <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <!-- Babel for JSX -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body {
@@ -73,18 +68,35 @@
       // Timer states
       const [totalHours, setTotalHours] = useState(20);
       const [mainTime, setMainTime] = useState(totalHours * 60 * 60);
-      const [sessionTime, setSessionTime] = useState(25 * 60); // 25 minutes session
+      const [sessionTime, setSessionTime] = useState(25 * 60);
       const [isRunning, setIsRunning] = useState(false);
       const [isBreak, setIsBreak] = useState(false);
-      const [breakTime, setBreakTime] = useState(5 * 60); // 5 minutes break
+      const [breakTime, setBreakTime] = useState(5 * 60);
       const [currentStudyTopic, setCurrentStudyTopic] = useState('Programming');
       
-      // History state
-      const [studyHistory, setStudyHistory] = useState({});
-      const [customTopics, setCustomTopics] = useState([]);
+      // Load history from localStorage on initial render
+      const [studyHistory, setStudyHistory] = useState(() => {
+        const savedHistory = localStorage.getItem('studyHistory');
+        return savedHistory ? JSON.parse(savedHistory) : {};
+      });
+      
+      const [customTopics, setCustomTopics] = useState(() => {
+        const savedTopics = localStorage.getItem('customTopics');
+        return savedTopics ? JSON.parse(savedTopics) : [];
+      });
+      
       const [newTopicInput, setNewTopicInput] = useState('');
 
       const intervalRef = useRef(null);
+
+      // Save to localStorage whenever studyHistory or customTopics changes
+      useEffect(() => {
+        localStorage.setItem('studyHistory', JSON.stringify(studyHistory));
+      }, [studyHistory]);
+
+      useEffect(() => {
+        localStorage.setItem('customTopics', JSON.stringify(customTopics));
+      }, [customTopics]);
 
       // Update main time when total hours changes
       useEffect(() => {
@@ -99,10 +111,9 @@
           intervalRef.current = setInterval(() => {
             setSessionTime(prev => {
               if (prev <= 1) {
-                // Session completed, start break
                 setIsBreak(true);
                 setBreakTime(5 * 60);
-                return 25 * 60; // Reset session timer
+                return 25 * 60;
               }
               return prev - 1;
             });
@@ -113,7 +124,6 @@
           intervalRef.current = setInterval(() => {
             setBreakTime(prev => {
               if (prev <= 1) {
-                // Break completed, resume session
                 setIsBreak(false);
                 recordStudySession();
                 return 5 * 60;
@@ -130,14 +140,43 @@
 
       const recordStudySession = () => {
         const today = new Date().toISOString().split('T')[0];
-        setStudyHistory(prev => ({
-          ...prev,
+        const updatedHistory = {
+          ...studyHistory,
           [today]: {
-            sessions: (prev[today]?.sessions || 0) + 1,
-            minutes: (prev[today]?.minutes || 0) + 25,
+            sessions: (studyHistory[today]?.sessions || 0) + 1,
+            minutes: (studyHistory[today]?.minutes || 0) + 25,
             topic: currentStudyTopic
           }
-        }));
+        };
+        setStudyHistory(updatedHistory);
+        
+        // Also save to a log file (simulated with localStorage)
+        const sessionLog = {
+          date: new Date().toISOString(),
+          duration: 25,
+          topic: currentStudyTopic,
+          type: 'session'
+        };
+        saveToLogFile(sessionLog);
+      };
+
+      const saveToLogFile = (logEntry) => {
+        const logs = JSON.parse(localStorage.getItem('studyLogs') || []);
+        logs.push(logEntry);
+        localStorage.setItem('studyLogs', JSON.stringify(logs));
+      };
+
+      const exportLogs = () => {
+        const logs = JSON.parse(localStorage.getItem('studyLogs') || []);
+        const dataStr = JSON.stringify(logs, null, 2);
+        const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+        
+        const exportName = 'study_logs_' + new Date().toISOString().split('T')[0] + '.json';
+        
+        const linkElement = document.createElement('a');
+        linkElement.setAttribute('href', dataUri);
+        linkElement.setAttribute('download', exportName);
+        linkElement.click();
       };
 
       const toggleTimer = () => {
@@ -164,7 +203,8 @@
 
       const addCustomTopic = () => {
         if (newTopicInput.trim() && !getAllTopics().includes(newTopicInput.trim())) {
-          setCustomTopics([...customTopics, newTopicInput.trim()]);
+          const updatedTopics = [...customTopics, newTopicInput.trim()];
+          setCustomTopics(updatedTopics);
           setNewTopicInput('');
         }
       };
@@ -186,7 +226,6 @@
         const today = new Date();
         const grid = [];
         
-        // Create 15 columns × 6 rows = 90 tiles
         for (let col = 0; col < 15; col++) {
           const column = [];
           for (let row = 0; row < 6; row++) {
@@ -215,7 +254,7 @@
             <div className="text-center mb-8">
               <div className="flex items-center justify-center gap-3 mb-4">
                 <BookIcon className="text-[#F76F53]" />
-                <h1 className="text-3xl font-medium text-[#BEBBAE]">Igris</h1>
+                <h1 className="text-3xl font-medium text-[#BEBBAE]">rdknl</h1>
               </div>
               
               <div className="flex items-center justify-center gap-2 mb-6">
@@ -230,7 +269,6 @@
                 </select>
               </div>
               
-              {/* Add custom topic */}
               <div className="flex items-center gap-2 mb-6">
                 <input
                   type="text"
@@ -248,7 +286,6 @@
                 </button>
               </div>
               
-              {/* Timer settings */}
               <div className="flex items-center justify-center gap-2 mb-6">
                 <label className="text-sm text-[#BEBBAE]">Total Hours:</label>
                 <input
@@ -266,7 +303,6 @@
             {/* Timer Display */}
             <div className="relative mb-10">
               <div className="relative w-72 h-72 mx-auto">
-                {/* Outer circle */}
                 <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
                   <circle
                     cx="50"
@@ -289,7 +325,6 @@
                   />
                 </svg>
                 
-                {/* Inner circle */}
                 <div className="absolute inset-6">
                   <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
                     <circle
@@ -313,7 +348,6 @@
                     />
                   </svg>
                   
-                  {/* Center display */}
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
                     <div className="text-center">
                       <div className="text-xs text-[#BEBBAE] mb-1">
@@ -331,7 +365,6 @@
               </div>
             </div>
 
-            {/* Control buttons */}
             <div className="flex justify-center gap-4 mb-10">
               <button
                 onClick={toggleTimer}
@@ -354,7 +387,6 @@
               </button>
             </div>
 
-            {/* Study History */}
             <div className="bg-[#010001] rounded-xl p-6 mb-6">
               <div className="flex items-center gap-2 mb-4">
                 <CalendarIcon className="text-[#F76F53]" />
@@ -366,7 +398,6 @@
                   {Object.values(studyHistory).reduce((acc, day) => acc + (day.sessions || 0), 0)} study sessions completed
                 </div>
                 
-                {/* Calendar grid */}
                 <div className="grid grid-cols-15 gap-1 w-full max-w-sm mx-auto">
                   {generateCalendarGrid().map((column, colIndex) => 
                     column.map((tile, rowIndex) => (
@@ -379,7 +410,6 @@
                   )}
                 </div>
                 
-                {/* Legend */}
                 <div className="flex items-center justify-between text-xs text-[#BEBBAE] mt-3">
                   <span>Less</span>
                   <div className="flex gap-1">
@@ -391,10 +421,17 @@
                   <span>More</span>
                 </div>
               </div>
+
+              <button 
+                onClick={exportLogs}
+                className="mt-4 bg-[#F76F53] hover:bg-[#e65a3e] text-[#010001] rounded-lg px-4 py-2 text-sm transition-all w-full"
+              >
+                Export All Session Data
+              </button>
             </div>
 
             <div className="text-center text-xs text-[#BEBBAE]">
-              <p>Igris productivity tool</p>
+              <p>rdknl productivity tool</p>
             </div>
           </div>
         </div>
