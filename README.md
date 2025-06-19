@@ -9,12 +9,3 @@ Primary Colors:
 
 #BEBBAE (Light Beige) - Used for text and icons
 
-Application:
-
-Dark mode interface with high contrast
-
-Coral accents for interactive elements
-
-Light beige text for readability
-
-Near-black panels for content containers
